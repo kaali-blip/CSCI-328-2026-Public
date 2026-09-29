@@ -1,0 +1,37 @@
+MeetingTime contract evaluation
+
+Commit 1: demonstrate the broken equals/hashCode contract
+Run registration.MeetingTimeContractsDemo with the original MeetingTime class:
+equals: true
+HashSet contains equal time: false
+
+The two separate objects have the same day and minute values, so equals returns
+true. MeetingTime inherits Object.hashCode, which depends on object identity.
+In this run, HashSet could not find the equal object in the set because its
+hash code sent the lookup to a different bucket.
+
+Commit 2: add hashCode based on day, startMinutes, and endMinutes
+equals: true
+HashSet contains equal time: true
+The fields used by hashCode now match those used by equals. Equal times can be
+found in a HashSet. The class remains mutable, however: changing a field after
+insertion can still make a stored time impossible to find.
+
+Commit 3: undo the manual hashCode method and convert MeetingTime to a record
+equals: true
+HashSet contains equal time: true
+
+Three benefits of the record:
+1. It generates value-based equals from all three components.
+2. It generates a matching hashCode, meeting the equals/hashCode contract.
+3. Its components cannot be changed after construction, so a time placed in a
+   hash-based collection cannot move to a different bucket through a setter.
+The record also generates toString instead of requiring the handwritten method.
+
+Cost: The old setters disappear, and record accessors are day(), startMinutes(),
+and endMinutes() instead of getDay(), getStartMinutes(), and getEndMinutes().
+Existing callers of those methods would need changes. The record is final and
+cannot be subclassed. Its generated toString is also different: for these
+values it prints MeetingTime[day=MON, startMinutes=540, endMinutes=630] instead
+of MON 540-630. The current registration package uses the constructor and
+overlaps, so it does not need caller changes for this conversion.
