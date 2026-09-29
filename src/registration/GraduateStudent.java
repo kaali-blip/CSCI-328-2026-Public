@@ -1,6 +1,6 @@
 package registration;
 
-public class GraduateStudent extends Student {
+public final class GraduateStudent extends Student {
 
     private boolean advisorApproval;
 
