@@ -3,7 +3,7 @@ package registration;
 import java.util.ArrayList;
 import java.util.List;
 
-public sealed class Student permits GraduateStudent {
+public final class Student {
 
     private String id;
     private String name;
