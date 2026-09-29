@@ -38,6 +38,11 @@ public class MeetingTime {
     }
 
     @Override
+    public int hashCode() {
+        return java.util.Objects.hash(day, startMinutes, endMinutes);
+    }
+
+    @Override
     public String toString() {
         return day + " " + startMinutes + "-" + endMinutes;
     }
