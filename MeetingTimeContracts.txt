@@ -1,0 +1,11 @@
+MeetingTime contract evaluation
+
+Commit 1: demonstrate the broken equals/hashCode contract
+Run registration.MeetingTimeContractsDemo with the original MeetingTime class:
+equals: true
+HashSet contains equal time: false
+
+The two separate objects have the same day and minute values, so equals returns
+true. MeetingTime inherits Object.hashCode, which depends on object identity.
+In this run, HashSet could not find the equal object in the set because its
+hash code sent the lookup to a different bucket.
