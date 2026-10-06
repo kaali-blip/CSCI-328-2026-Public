@@ -11,9 +11,7 @@ public class Catalog {
     }
 
     private static Course createCourse(List<String> prerequisites) {
-        Course course = new Course("CS201", "Data Structures", 4);
-        course.setPrerequisites(prerequisites);
-        return course;
+        return new Course("CS201", "Data Structures", 4, prerequisites);
     }
 
     private static Student passingStudent(String id, String name) {
