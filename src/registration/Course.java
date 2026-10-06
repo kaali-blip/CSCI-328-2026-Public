@@ -1,5 +1,7 @@
 package registration;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class Course {
@@ -17,7 +19,7 @@ public final class Course {
         this.code = code;
         this.title = title;
         this.credits = credits;
-        this.prerequisites = List.copyOf(prerequisites);
+        this.prerequisites = Collections.unmodifiableList(new ArrayList<>(prerequisites));
     }
 
     public String getCode() { return code; }

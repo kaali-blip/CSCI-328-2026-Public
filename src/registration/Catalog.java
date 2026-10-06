@@ -8,6 +8,7 @@ public class Catalog {
     public static void main(String[] args) {
         attack1();
         attack2();
+        attack3();
     }
 
     private static Course createCourse(List<String> prerequisites) {
@@ -59,5 +60,26 @@ public class Catalog {
         System.out.println(service.describeResult(second, section));
         System.out.println("Course prerequisites: " + course.getPrerequisites());
         System.out.println();
+    }
+
+    private static void attack3() {
+        System.out.println("Attack 3: null prerequisite");
+        ArrayList<String> prerequisites = new ArrayList<>();
+        prerequisites.add("CS101");
+        prerequisites.add(null);
+        Student student = passingStudent("CN001", "Null Student");
+
+        Course course;
+        try {
+            course = createCourse(prerequisites);
+        } catch (NullPointerException ex) {
+            System.out.println("Construction failed: NullPointerException");
+            System.out.println("Advising screen: no course created; registration not attempted.");
+            return;
+        }
+        System.out.println("Construction succeeded.");
+        CourseOffering section = new CourseOffering("20103", course, 2);
+        RegistrationService service = new RegistrationService();
+        System.out.println(service.describeResult(student, section));
     }
 }
