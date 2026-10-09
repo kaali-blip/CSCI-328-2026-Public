@@ -10,8 +10,10 @@ public class Main {
         sis.seed("S002", "CS101", "F", "2025FA");
 
         Course cs101 = new Course("CS101", "Intro to Programming", 4);
+
         Course cs201 = new Course("CS201", "Data Structures", 4);
         cs201.getPrerequisites().add("CS101");
+
         Course cs301 = new Course("CS301", "Object Oriented Design", 3);
         cs301.getPrerequisites().add("CS201");
 
@@ -27,18 +29,30 @@ public class Main {
 
         RegistrationService service = new RegistrationService();
 
-        System.out.println(service.describeResult(alice, ds));
-        System.out.println(service.describeResult(ben, ds));
-        System.out.println(service.describeResult(alice, ood));
+        registerAndReport(service, alice, ds);
+        registerAndReport(service, ben, ds);
+        registerAndReport(service, alice, ood);
 
         System.out.println();
         System.out.println("Alice is enrolled in: " + Arrays.toString(
                 alice.getCurrentEnrollments().stream()
-                     .map(o -> o.getCourse().getCode()).toArray()));
+                        .map(o -> o.getCourse().getCode())
+                        .toArray()));
 
         Roster roster = new Roster("10422", 2);
         roster.getStudents().put(alice.getId(), alice);
+
         System.out.println();
         System.out.print(service.formatRosterForAdvising(roster));
+    }
+
+    private static void registerAndReport(RegistrationService service,
+                                          Student student, CourseOffering offering) {
+        if (service.register(student, offering)) {
+            System.out.println(student.getName() + " registered for "
+                    + offering.getCourse().getCode());
+        } else {
+            System.out.println(service.describeResult(student, offering));
+        }
     }
 }

@@ -4,73 +4,48 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RegistrationService {
+    private final EligibilityChecker eligibility = new EligibilityChecker();
+    private List<EligibilityReason> lastReasons = List.of();
 
-    private List<String> lastErrors = new ArrayList<String>();
+    private final WaitlistManager waitlist = new WaitlistManager();
+    private final AuditLog audit = new AuditLog();
+    private final NotificationGateway notifications = new NotificationGateway();
 
-    private WaitlistManager waitlist = new WaitlistManager();
-    private AuditLog audit = new AuditLog();
-    private NotificationGateway notifications = new NotificationGateway();
+    public List<EligibilityReason> getLastReasons() {
+        return lastReasons;
+    }
 
     public List<String> getLastErrors() {
-        return lastErrors;
+        List<String> messages = new ArrayList<>();
+        for (EligibilityReason reason : lastReasons) {
+            messages.add(reason.message());
+        }
+        return List.copyOf(messages);
     }
 
     public WaitlistManager getWaitlist() {
         return waitlist;
     }
 
+    public List<EligibilityReason> checkEligibility(Student student, CourseOffering offering) {
+        return eligibility.check(student, offering);
+    }
+
     public boolean register(Student student, CourseOffering offering) {
-        lastErrors.clear();
+        lastReasons = checkEligibility(student, offering);
 
-        String[][] rows = LegacySisClient.getInstance().fetchGradeRows(student.getId());
-
-        for (int i = 0; i < rows.length; i++) {
-            if (rows[i][0].equals(offering.getCourse().getCode())
-                    && Grade.valueOf(rows[i][1]).isPassing()) {
-                lastErrors.add("Already completed " + offering.getCourse().getCode());
-                return false;
-            }
-        }
-
-        for (String prereq : offering.getCourse().getPrerequisites()) {
-            boolean satisfied = false;
-            for (int i = 0; i < rows.length; i++) {
-                if (rows[i][0].equals(prereq) && Grade.valueOf(rows[i][1]).isPassing()) {
-                    satisfied = true;
+        if (!lastReasons.isEmpty()) {
+            // Waitlist only when fullness is the only failure.
+            if (lastReasons.size() == 1
+                    && lastReasons.get(0).rule() == EligibilityRule.SECTION_FULL
+                    && "true".equals(Config.settings.get("waitlist_enabled"))) {
+                if (waitlist.positionOf(offering.getCrn(), student.getId()) == -1) {
+                    waitlist.add(offering.getCrn(), student.getId());
+                    audit.record("WAITLISTED", student.getId() + " -> " + offering.getCrn());
                 }
-            }
-            if (!satisfied) {
-                lastErrors.add("Missing prerequisite: " + prereq);
-                return false;
-            }
-        }
-
-        for (CourseOffering current : student.getCurrentEnrollments()) {
-            for (MeetingTime existing : current.getMeetings()) {
-                for (MeetingTime proposed : offering.getMeetings()) {
-                    if (existing.overlaps(proposed)) {
-                        lastErrors.add("Time conflict with " + current.getCourse().getCode());
-                        return false;
-                    }
-                }
-            }
-        }
-
-        int maxCredits = Config.getInt("max_credits", 18);
-        int total = student.getCurrentCredits() + offering.getCourse().getCredits();
-        if (total > maxCredits) {
-            lastErrors.add("Would total " + total + " credits, limit is " + maxCredits);
-            return false;
-        }
-
-        if (!offering.hasOpenSeats()) {
-            if (Config.settings.get("waitlist_enabled").equals("true")) {
-                waitlist.add(offering.getCrn(), student.getId());
-                audit.record("WAITLISTED", student.getId() + " -> " + offering.getCrn());
-                lastErrors.add("Section full; added to waitlist at position "
-                        + waitlist.positionOf(offering.getCrn(), student.getId()));
-            } else {
-                lastErrors.add("Section is full");
+                lastReasons = List.of(new EligibilityReason(EligibilityRule.SECTION_FULL,
+                        "Section full; added to waitlist at position "
+                        + waitlist.positionOf(offering.getCrn(), student.getId())));
             }
             return false;
         }
@@ -95,15 +70,20 @@ public class RegistrationService {
         }
     }
 
+    // Planning query: never registers or waitlists the student.
     public String describeResult(Student student, CourseOffering offering) {
-        if (register(student, offering)) {
-            return student.getName() + " registered for " + offering.getCourse().getCode();
+        List<EligibilityReason> reasons = checkEligibility(student, offering);
+        if (reasons.isEmpty()) {
+            return student.getName() + " could register for " + offering.getCourse().getCode();
         }
-        String out = student.getName() + " could not register:";
-        for (String error : lastErrors) {
-            out = out + "\n  - " + error;
+        StringBuilder out = new StringBuilder(student.getName() + " could not register:");
+        for (EligibilityReason reason : reasons) {
+            out.append("\n  - ").append(reason.rule()).append(": ").append(reason.message());
+            if (reason.canRequestOverride()) {
+                out.append(" [request override]");
+            }
         }
-        return out;
+        return out.toString();
     }
 
     public String formatRosterForAdvising(Roster roster) {

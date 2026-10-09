@@ -1,0 +1,49 @@
+Milestone Project Eligibility
+
+Baseline problem:
+describeResult called register. Displaying a result could enroll a student,
+send a notification, write an audit entry, or add someone to a waitlist.
+The method name did not make those effects clear.
+
+Changes:
+EligibilityChecker evaluates all five existing rules without stopping after
+the first failure. Multiple missing prerequisites or conflicting courses are
+grouped into one reason for their rule, with all affected course codes listed.
+checkEligibility and describeResult only read state. Main explicitly calls
+register so its original registration decisions remain the same.
+
+Reason design:
+EligibilityRule is an enum because there are five known rule identities.
+EligibilityReason is an immutable record containing a rule and a message.
+The message carries information from that particular failure: missing course
+codes, conflicting courses, or the calculated credit total and limit.
+One enum constant cannot store different details for different students.
+The advising screen uses the rule and canRequestOverride(), not English text.
+Only prerequisite and credit-cap failures allow an override request.
+Requesting an override is not the same as granting one.
+
+Credit cap:
+Config still stores max_credits. EligibilityChecker applies the credit-cap
+rule; Student calculates current credits.
+A separate graduate cap would require a configuration value, selecting the
+cap using student.getLevel() in the checker, and tests for both student levels.
+No separate graduate cap or general rule framework was built.
+
+Vendor boundary:
+SisTranscript converts the vendor's String[][] into passed course codes.
+LegacySisClient and its returned format are unchanged.
+
+Tradeoffs:
+Evaluating every rule does more work than returning after the first failure.
+Adding a rule requires editing the enum and checker and updating tests.
+Messages are English strings, so localization or displaying each missing
+prerequisite as a separate clickable item would require richer detail fields.
+Results are snapshots: registration rechecks eligibility because seats,
+grades, configuration, or enrollments may change after a planning check.
+
+Verification:
+EligibilityChecks checks three simultaneous failures, all five failures,
+rule identifiers, override permissions, repeated planning calls, unchanged
+enrollment and waitlist state, successful registration, and full-only waitlisting.
+Main still enrolls Alice in CS201 and rejects Ben's CS201 and Alice's CS301.
+Alice's CS301 attempt now reports both its prerequisite and time conflict.
