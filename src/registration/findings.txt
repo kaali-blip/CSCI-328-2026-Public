@@ -1,0 +1,185 @@
+SECTION 1 - THE CALL SEQUENCES
+
+Defect one: crashing version
+
+1. Start a fresh Java process. Get LegacySisClient.getInstance()
+   and seed S001, CS101, B, 2025SP. Then seed S001, CS101, I,
+   2025FA. I means Incomplete, but Grade only contains A, B, C,
+   D, F, and W.
+
+2. Build Student("S001", "Alice Reyes", "UNDERGRADUATE").
+   Build Course("CS201", "Data Structures", 4), add prerequisite
+   CS101, and build CourseOffering("10422", cs201, 2).
+
+3. Create a RegistrationService and print
+   describeResult(student, offering).
+
+4. During the prerequisite check, register finds the passing B
+   row. However, it continues checking rows and reaches the
+   CS101 row containing I. Grade.valueOf("I") throws
+   IllegalArgumentException: No enum constant registration.Grade.I.
+
+5. The crash happens at RegistrationService.java:38 inside
+   register. describeResult never returns a result. The complete
+   stack trace is in defect-one-output.txt.
+
+Defect one: safe version
+
+1. Start another fresh Java process by running DefectOne with
+   the safe argument. Use the same student, passing B row,
+   course, prerequisite, offering, and service setup.
+
+2. Seed S001, HIST101, I, 2025FA. Only the unfamiliar row's
+   course code changes, from CS101 to HIST101. Its student,
+   grade, and term stay the same.
+
+3. Call describeResult for CS201. HIST101 matches neither the
+   requested course nor its prerequisite. Java's short-circuit
+   && therefore skips Grade.valueOf for that row.
+
+4. The B in CS101 satisfies the prerequisite. Registration
+   succeeds and prints the enrollment audit, notification,
+   and "Alice Reyes registered for CS201."
+
+Defect two
+
+1. Start a fresh Java process. Build Alice, S001, and Ben, S002,
+   as undergraduate students. Seed Alice with a B in CS201
+   for 2025FA.
+
+2. Build CS201, Data Structures, 4 credits, with offering CRN
+   20422 and capacity 2. Build CS301, Object Oriented Design,
+   3 credits, with offering CRN 20515 and capacity 0. Neither
+   course has prerequisites or meetings.
+
+3. Using one RegistrationService, call
+   register(alice, firstOffering). It returns false because
+   Alice already completed CS201.
+
+4. Call getLastErrors() once and store its returned reference
+   in final List<String> savedErrors. Print the first boolean
+   and savedErrors. The list is [Already completed CS201].
+
+5. Call register(ben, secondOffering). It returns false because
+   the section is full. The baseline enables waitlisting, so
+   Ben is added at position 1 and an audit line is printed.
+
+6. Print the second boolean and the same savedErrors variable.
+   It now contains:
+   [Section full; added to waitlist at position 1]
+
+7. I did not reassign or copy the reference, call a setter,
+   or mutate a list. The service changed the shared list.
+
+Defect three
+
+1. Start a fresh Java process with the baseline credit limit
+   of 18. Build Alice, S001, and one RegistrationService.
+
+2. Call student.enroll four times to set up PREP1 through
+   PREP4. Each course has 4 credits. Their offerings have
+   CRNs 30001 through 30004 and capacity 30. Alice now has
+   16 credits.
+
+3. Build CS201, Data Structures, 4 credits, with no prerequisites
+   or meetings. Build one offering with CRN 30422 and capacity 2.
+   Store it in final variable nextOffering.
+
+4. Print the current credits and CRN. Call
+   describeResult(student, nextOffering). It refuses with:
+   "Would total 20 credits, limit is 18."
+   Alice remains at 16 credits.
+
+5. Execute this one statement:
+   Config.settings.put("max_credits", "20");
+
+6. Print the same CRN and call describeResult again with the
+   same student, offering, and service. It accepts, prints the
+   audit and notification, and returns:
+   "Alice Reyes registered for CS201."
+   Alice finishes with 20 credits.
+
+
+SECTION 2 - WHICH LETTER WOULD HAVE CAUGHT IT?
+
+Defect one: D, Dependency Inversion Principle
+
+Registration policy directly depends on the concrete
+LegacySisClient singleton and interprets its raw string rows.
+This puts knowledge of an outside system's grade codes inside
+the eligibility logic.
+
+A domain-owned transcript interface could provide completion
+information. A SIS adapter would implement that interface and
+translate vendor grades, including explicit incomplete or
+unknown results. Registration policy would depend on the
+domain contract instead of the SIS representation.
+
+This boundary would keep the unfamiliar I code out of
+Grade.valueOf in registration policy. Merely adding an
+interface while keeping the unsafe conversion would not
+prevent the crash. The translation matters too.
+
+Defect two: none of the five
+
+The mechanism is representation exposure and aliasing.
+getLastErrors returns the service's actual mutable list.
+register clears and refills that same object for the next
+request.
+
+Making the local reference final prevents reassignment, but
+it does not freeze the list. Encapsulation and an immutable
+snapshot, or a separate immutable result per registration,
+would preserve Alice's reasons.
+
+An unmodifiable view of the same backing list would still
+change when the service changes it. None of the five SOLID
+letters alone requires snapshot semantics.
+
+Defect three: none of the five
+
+The mechanism is unrestricted shared mutable state.
+Config.settings is a public static map, and register reads
+max_credits again on each call.
+
+An unrelated caller can change the policy without changing
+the student, offering, or service. Legitimate policy updates
+can change outcomes. The defect is that any caller can
+rewrite this shared policy without a controlled boundary.
+
+Encapsulation, explicit policy ownership, and stable
+configuration for a registration operation would address
+this. Adding an interface alone would not make mutable
+configuration safe.
+
+
+SECTION 3 - THE CLOSING ARGUMENT
+
+Defect two connects to encapsulation, aliasing, and defensive
+copying from the earlier material. A result that a caller
+keeps should not silently become another person's result.
+These ideas concern who owns an object and how long its
+contents stay valid, rather than one of SOLID's rules about
+responsibilities, extension, substitution, interfaces, or
+dependencies.
+
+Defect three connects to encapsulation and protecting
+invariants. The credit rule needs an owner and a controlled
+way to change it. The same arguments can produce different
+outcomes here because a hidden global input changed. A
+private, stable policy would make that dependency easier
+to understand. SOLID does not itself require immutable or
+properly scoped state.
+
+My conclusion is that SOLID helps organize code, but it does
+not replace checking what that code exposes and allows.
+The SIS dependency gives one useful SOLID finding. The
+changing error list and writable global limit show problems
+that the five letters do not directly settle.
+
+The strongest objection is that SOLID was meant to improve
+maintainability, not guarantee correctness. These examples
+show its limits, not that it is useless. Even a good
+transcript interface still needs correct grade translation.
+The better approach is to use SOLID together with contracts,
+encapsulation, and tests of actual behavior.
