@@ -1,0 +1,9 @@
+Current credits: 16
+Before change - CRN 30422
+Alice Reyes could not register:
+  - Would total 20 credits, limit is 18
+After change - same CRN 30422
+[audit] ENROLLED :: S001 -> 30422
+[notify] S001 | Enrollment confirmed | You are enrolled in CS201.
+Alice Reyes registered for CS201
+Current credits after acceptance: 20
