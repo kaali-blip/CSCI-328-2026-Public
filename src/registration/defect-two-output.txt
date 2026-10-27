@@ -1,0 +1,5 @@
+First accepted: false
+Saved Alice errors before Ben registers: [Already completed CS201]
+[audit] WAITLISTED :: S002 -> 20515
+Second accepted: false
+Saved Alice errors after Ben registers: [Section full; added to waitlist at position 1]

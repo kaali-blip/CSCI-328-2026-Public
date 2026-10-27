@@ -1,0 +1,11 @@
+CRASH VERSION: I on prerequisite CS101
+Exception in thread "main" java.lang.IllegalArgumentException: No enum constant registration.Grade.I
+	at java.base/java.lang.Enum.valueOf(Enum.java:273)
+	at registration.Grade.valueOf(Grade.java:3)
+	at registration.RegistrationService.register(RegistrationService.java:38)
+	at registration.RegistrationService.describeResult(RegistrationService.java:99)
+	at registration.DefectOne.main(DefectOne.java:25)
+SAFE VERSION: I on unrelated HIST101
+[audit] ENROLLED :: S001 -> 10422
+[notify] S001 | Enrollment confirmed | You are enrolled in CS201.
+Alice Reyes registered for CS201
