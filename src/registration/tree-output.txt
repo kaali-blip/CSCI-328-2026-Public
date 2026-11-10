@@ -1,0 +1,3 @@
+CS301 prerequisite: (CS201 and (MATH150 or MATH160))
+S007 passed CS201 and MATH160: true
+S008 passed MATH150 and MATH160 (no CS201): false

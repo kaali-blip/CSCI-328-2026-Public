@@ -1,0 +1,15 @@
+package registration;
+
+import java.util.List;
+
+public sealed interface Requirement {
+
+    record CourseRequirement(String code)
+            implements Requirement {}
+
+    record AllOf(List<Requirement> requirements)
+            implements Requirement {}
+
+    record AnyOf(List<Requirement> requirements)
+            implements Requirement {}
+}
