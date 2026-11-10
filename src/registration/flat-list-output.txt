@@ -1,0 +1,2 @@
+Dana Whitfield could not register:
+  - Missing prerequisite: MATH150
