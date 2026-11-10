@@ -5,7 +5,10 @@ public enum EligibilityRule {
     PREREQUISITE(true),
     TIME_CONFLICT(false),
     CREDIT_CAP(true),
-    SECTION_FULL(false);
+    SECTION_FULL(false),
+    ALREADY_ENROLLED(false),
+    PROPOSED_TIME_CONFLICT(false),
+    DUPLICATE_PROPOSED_COURSE(false);
 
     private final boolean overrideAllowed;
 

@@ -1,40 +1,23 @@
 package registration;
 
-public class MeetingTime {
+import java.util.Objects;
 
-    private String day;
-    private int startMinutes;
-    private int endMinutes;
-
-    public MeetingTime(String day, int startMinutes, int endMinutes) {
-        this.day = day;
-        this.startMinutes = startMinutes;
-        this.endMinutes = endMinutes;
+/** Immutable value: records give matching equals and hashCode for Set use. */
+public record MeetingTime(String day, int startMinutes, int endMinutes) {
+    public MeetingTime {
+        Objects.requireNonNull(day);
     }
 
+    // Keep the existing getter names for current callers.
     public String getDay() { return day; }
-    public void setDay(String day) { this.day = day; }
-
     public int getStartMinutes() { return startMinutes; }
-    public void setStartMinutes(int startMinutes) { this.startMinutes = startMinutes; }
-
     public int getEndMinutes() { return endMinutes; }
-    public void setEndMinutes(int endMinutes) { this.endMinutes = endMinutes; }
 
+    // Same overlap rule as before. Touching end/start times do not overlap.
     public boolean overlaps(MeetingTime other) {
         return day.equals(other.day)
                 && startMinutes < other.endMinutes
                 && other.startMinutes < endMinutes;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof MeetingTime)) return false;
-        MeetingTime that = (MeetingTime) o;
-        return startMinutes == that.startMinutes
-                && endMinutes == that.endMinutes
-                && day.equals(that.day);
     }
 
     @Override

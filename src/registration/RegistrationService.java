@@ -2,14 +2,27 @@ package registration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class RegistrationService {
-    private final EligibilityChecker eligibility = new EligibilityChecker();
+    private final EligibilityChecker eligibility;
+    private final SchedulePlanner planner;
     private List<EligibilityReason> lastReasons = List.of();
 
     private final WaitlistManager waitlist = new WaitlistManager();
     private final AuditLog audit = new AuditLog();
     private final NotificationGateway notifications = new NotificationGateway();
+
+    // Old callers keep using this constructor and checkEligibility as before.
+    public RegistrationService() {
+        this(new CourseCatalog());
+    }
+
+    public RegistrationService(CourseCatalog catalog) {
+        Objects.requireNonNull(catalog);
+        this.eligibility = new EligibilityChecker(catalog);
+        this.planner = new SchedulePlanner(catalog, eligibility);
+    }
 
     public List<EligibilityReason> getLastReasons() {
         return lastReasons;
@@ -29,6 +42,10 @@ public class RegistrationService {
 
     public List<EligibilityReason> checkEligibility(Student student, CourseOffering offering) {
         return eligibility.check(student, offering);
+    }
+
+    public ScheduleResult checkSchedule(Student student, List<CourseOffering> proposed) {
+        return planner.check(student, proposed);
     }
 
     public boolean register(Student student, CourseOffering offering) {

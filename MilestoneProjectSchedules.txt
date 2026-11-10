@@ -1,0 +1,68 @@
+MilestoneProjectSchedules - Design Text
+
+Main problem:
+Milestone 1 could check one section, but it could not compare two proposed
+sections. A student could plan two classes at the same time and neither
+would look wrong on its own. The new schedule check looks at both the
+individual sections and the complete group before anyone registers.
+
+Course identity and cross-listing:
+At first the system used the course code as the identity. That no longer
+works because CS301 and MATH301 can be the same course. CourseCatalog now
+keeps an internal CourseId for each course and maps all cross-listed codes
+to that same identity. We still show the code to users, but compare the
+CourseId when deciding whether a class was passed, meets a prerequisite,
+or is already on the student's schedule. Adding STAT301 later is just
+another catalog alias; no pair-by-pair special cases are needed.
+
+The catalog also creates an alternate CourseOffering that shares the same
+physical section state: CRN, meetings, capacity, and enrolled seat count.
+This prevents either listing from giving out a separate set of seats.
+Cross-listing is configured once in CourseCatalog, not passed into every
+eligibility or schedule check.
+
+Where schedule problems live:
+Milestone 1's EligibilityReason is still used for single-section checks.
+The new ScheduleProblem contains a rule, a message, and a list of the
+sections affected. That list can have one section, two sections, or the
+whole plan for the combined credit-cap rule. ScheduleResult contains all
+the problems and the distinct weekly meeting times. Keeping these types
+separate preserves checkEligibility(student, offering) and describeResult
+for existing callers. If I had known in Milestone 1 that errors could
+involve two sections, I might have designed reason objects with an affected
+sections list from the start. It was reasonable not to guess that feature.
+
+How the checks work:
+SchedulePlanner first reuses EligibilityChecker for each proposed section.
+It then checks every pair for a time overlap or two codes that identify the
+same course. A whole-plan credit total is checked once, with repeated
+cross-listed courses counted only once. This catches a credit limit that
+individual section checks could miss. The query never enrolls students,
+adds them to waitlists, or sends notifications.
+
+MeetingTime and the Set warning:
+The combined week uses a LinkedHashSet so the same meeting slot appears
+only once. MeetingTime used to override equals without hashCode. That
+breaks the Set contract and can leave duplicate-looking slots in a set.
+I made MeetingTime a record. Its equality and hash code both use day,
+startMinutes, and endMinutes, and its fields cannot change after insertion.
+The overlaps method still uses the original overlapping-time test. Two
+slots that merely touch at an end time are not overlapping.
+
+Performance and tradeoffs:
+For n proposed sections, pair comparison takes O(n^2) section pairs.
+Within a pair, meeting comparison depends on the number of meeting times
+in each section. With four or five proposed sections this is small (6 or
+10 pairs), so a more complicated scheduling index is not needed yet.
+For a much larger batch I would consider indexing slots by day and time.
+One cost is adding CourseCatalog and the new result types. Another is that
+catalog aliases must be created through the catalog so they share seats.
+I kept the existing single-section API rather than replacing it.
+
+Verification:
+ScheduleChecks covers a third course alias, prerequisite and passed checks,
+existing enrollment, shared seat capacity, conflicts between new sections,
+duplicate proposed cross-listings, whole-plan credit totals, distinct
+meeting slots, and read-only planning. The older EligibilityChecks still
+checks the original single-section contract. Main shows cross-listing and
+a whole-schedule check.
