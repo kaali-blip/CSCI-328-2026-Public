@@ -1,0 +1,11 @@
+SECTION 1: THE FALSE CLAIM
+
+The flat list told Dana Whitfield "Missing prerequisite: MATH150," even though Dana already passed CS201 and MATH160. This is incorrect because Dana meets the actual requirement for CS301. There is no specific line in RegistrationService that is wrong. The problem is that the flat list treats every prerequisite as required and cannot represent an either-or rule.
+
+SECTION 2: WHERE THE TREE CAME FROM
+
+I had to work with the String[][] returned by LegacySisClient instead of a regular transcript object. My code checks the course code in column 0 and the passing grade in column 1. Both students passed two courses, but only S007 meets the full requirement. S008 passed both math courses but not CS201, showing that the program checks the actual rule instead of just counting passed courses.
+
+SECTION 3: THE TRADE
+
+When I added the MinimumGpa record, the compiler reported 2 errors in Requirements.java, on lines 11 and 30. Both errors happened because the two switch expressions did not handle the new requirement type. With the original flat list, adding a new type would cause zero compiler errors and require zero edits if the system kept treating prerequisites as course codes. However, that does not mean it actually supports a minimum GPA requirement. A GPA is not a course code, so the flat list cannot represent that rule correctly. The flat list looks easier because there are fewer edits, but it comes at the cost of incorrect registration decisions. In commit 1, the system printed "Missing prerequisite: MATH150" for Dana, even though Dana passed MATH160 and met the actual requirement. This could force qualified students to request manual overrides. I would choose the requirement tree because it represents the rules correctly and makes the compiler identify where changes are needed. I would only choose the flat list if the registrar guaranteed that prerequisites would always require every listed course, without either-or options or GPA requirements. In that case, the simpler flat list would be enough.
