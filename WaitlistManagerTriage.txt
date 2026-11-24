@@ -1,0 +1,86 @@
+Waitlist Manager Triage Evaluation
+
+1. Fix Now - Promotion throttle race condition
+
+The promoteNext method checks the daily promotion limit
+before adding another promotion. If two calls happen at
+the same time, both could pass the limit check before
+either updates the set.
+
+This is a possible explanation for ticket REG-4488,
+where the registrar reported that the throttle sometimes
+allows too many promotions. It also explains why the
+problem could be difficult to reproduce manually.
+
+My fix is to synchronize promoteNext and
+clearDailyPromotions so that promotion calls and the
+nightly reset cannot overlap on the same manager instance.
+
+I chose this defect because it affects registration
+correctness, has been reported multiple times, and can
+be addressed without a large redesign before the freeze.
+
+2. Defects I Would Not Fix Now
+
+Public static settings
+Verdict: Fix when next touched.
+
+The settings map is public, mutable, and shared globally.
+Other code could change its values without validation.
+REG-4471 is already committed for October and requires
+department-specific settings. That work is a better
+opportunity to improve how settings are managed.
+
+Missing hashCode in WaitlistEntry
+Verdict: Fix when next touched.
+
+WaitlistEntry overrides equals but does not override
+hashCode. This violates the Java equality contract.
+However, adding hashCode alone could cause repeated
+promotions for the same student and course to count as
+one promotion. I would address this when REG-4471
+changes how promotions are counted and limited.
+
+Expired offer handling
+Verdict: Rewrite, not refactor.
+
+purgeExpiredOffers checks when students joined the
+waitlist rather than when they received an offer.
+It could remove students who have been waiting a long
+time without receiving an offer. A proper solution needs
+separate offer records and expiration times.
+
+CSV escaping
+Verdict: Document and leave.
+
+exportCsv does not escape student IDs containing commas,
+quotes, or newlines. If student IDs are restricted to
+safe characters, this may not cause a production issue.
+I would document this assumption in context.md rather
+than change the compliance export before the freeze.
+
+Duplicate waitlist entries
+Verdict: Document and leave.
+
+addToWaitlist does not prevent the same student from
+joining the same course multiple times. The registration
+controller may already prevent this. Without confirming
+that behavior, I would document the risk in context.md.
+
+3. Information That Could Change My Decisions
+
+I would check whether SeatReleaseJob can make concurrent
+calls and whether production uses multiple manager
+instances. If calls are always sequential, the race
+condition becomes less likely. If multiple instances
+exist, synchronization alone is not enough.
+
+I would check the student ID format used in production.
+If commas or quotes are permitted, I would move CSV
+escaping to a higher priority because compliance reports
+could contain incorrect data.
+
+I would also check whether NightlyBatch has removed
+students who never received an offer. If this happens
+regularly, the expired offer defect would become a
+stronger candidate for the immediate fix.
